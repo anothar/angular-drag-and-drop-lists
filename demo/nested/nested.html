@@ -60,8 +60,7 @@
                  element was created, dnd-copied is invoked and we generate the next id -->
             <li ng-repeat="item in models.templates"
                 dnd-draggable="item"
-                dnd-effect-allowed="copy"
-                dnd-copied="item.id = item.id + 1"
+                dnd-moved="item.id = item.id + 1"
                 >
                 <button type="button" class="btn btn-default btn-lg" disabled="disabled">{{item.type}}</button>
             </li>

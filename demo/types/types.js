@@ -1,5 +1,7 @@
 angular.module("demo").controller("TypesDemoController", function($scope) {
-
+    $scope.dragover=function(list,item){
+        return (list.allowedTypes.indexOf(item.type)>=0)&&(list.people.length<list.max);
+    };
     $scope.lists = [
         {
             label: "Men",

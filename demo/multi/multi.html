@@ -1,13 +1,15 @@
 <ul dnd-list dnd-drop="onDrop(list, item, index)">
-    <li ng-repeat="item in list.items"
-        dnd-draggable="getSelectedItemsIncluding(list, item)"
-        dnd-dragstart="onDragstart(list, event)"
-        dnd-moved="onMoved(list)"
-        dnd-dragend="list.dragging = false"
-        dnd-selected="item.selected = !item.selected"
-        ng-class="{'selected': item.selected}"
-        ng-hide="list.dragging && item.selected"
-        >
-        {{item.label}}
+    <li ng-repeat="item in list.items" dnd-draggable="getSelectedItemsIncluding(list, item)" 
+        dnd-dragstart="item.dragging=true;list.dragging=true;"
+        dnd-moved="moved(list)"
+        dnd-dragend="list.dragging = false;item.dragging=false;"
+        dnd-selected="item.selected = !item.selected" ng-class="{'selected': item.selected}"
+        ng-hide="item.selected&&list.dragging&&!item.dragging"
+        dnd-selected="item.selected=!item.selected">
+        <div class="item">
+            <span>
+                {{item.dragging?''+getSelectedItemsIncluding(list,item).length+' items dragging':item.label}}
+            </span>
+        </div>
     </li>
 </ul>

@@ -68,3 +68,14 @@ body {
     background-image: -webkit-linear-gradient(top,#fcf8e3 0,#faf2cc 100%);
     background-image: linear-gradient(to bottom,#fcf8e3 0,#faf2cc 100%);
 }
+
+.dndDragging{
+    z-index:99999;
+    height: 0;
+    display:flex !important;
+    width:100%;
+}
+
+.dndDragging .item{
+    padding:10px 15px;
+}

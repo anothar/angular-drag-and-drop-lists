@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "es5",
+        "module": "system",
+        "sourceMap": true,
+        "removeComments": true,
+        "emitDecoratorMetadata": false,
+        "experimentalDecorators": true
+    },
+    "files": [
+        "sources/angularDirective.ts",
+        "sources/dndService.ts",
+        "sources/dndDraggable.ts",
+        "sources/dndList.ts"
+    ]
+}

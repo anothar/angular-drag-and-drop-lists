@@ -62,7 +62,7 @@
   user-select: none;
 }
 
-.typesDemo ul[dnd-list] li dnd-nodrag {
+.typesDemo ul[dnd-list] li .item {
   display: block;
   padding: 10px 15px;
 }
