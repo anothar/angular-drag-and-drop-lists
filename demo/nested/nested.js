@@ -6,6 +6,11 @@ angular.module("demo").controller("NestedListsDemoController", function ($scope)
         list.splice(index, 1);
         return true;
     };
+    $scope.copy=function(item)
+    {
+        item.id = item.id + 1;
+        return false;
+    }
     $scope.models = {
         selected: null,
         templates: [

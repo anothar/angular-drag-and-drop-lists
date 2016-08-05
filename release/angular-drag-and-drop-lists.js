@@ -85,8 +85,8 @@ var dndList;
                         return;
                     isDragging = false;
                     var target = element[0];
-                    target.style.webkitTransform =
-                        target.style.transform = null;
+                    target.style.webkitTransform = null;
+                    target.style.transform = null;
                     element.removeClass("dndDragging");
                     element.remove();
                     var restoreState = function () {
@@ -96,6 +96,8 @@ var dndList;
                             parent.insertBefore(target, nextElement);
                         else
                             parent.appendChild(target);
+                        target.style.webkitTransform = null;
+                        target.style.transform = "translate(0,0)";
                     };
                     if (self.dndService.isDroped) {
                         if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
@@ -124,6 +126,11 @@ var dndList;
                             return;
                         isDragging = true;
                         var target = element[0];
+                        var lists = target.querySelectorAll('[dnd-list]');
+                        for (var i = 0; i < lists.length; i++) {
+                            var list = lists[i];
+                            interact(list).dropzone(false);
+                        }
                         var rect = target.getBoundingClientRect();
                         mouseX = rect.left - event.clientX;
                         mouseY = rect.top - event.clientY;
@@ -153,6 +160,14 @@ var dndList;
                             self.$parse(attrs.dndDragstart)(scope, { event: event });
                         }, 0);
                     }).on('dragend', function (event) {
+                        var lists = element[0].querySelectorAll('[dnd-list]');
+                        for (var i = 0; i < lists.length; i++) {
+                            var list = lists[i];
+                            interact(list).dropzone(true);
+                        }
+                        var target = element[0];
+                        target.style.webkitTransform = null;
+                        target.style.transform = null;
                         self.$timeout(function () { scope.endDrag(event); }, 0);
                     }).on('dragmove', function (event) {
                         var rect = element[0].getBoundingClientRect();

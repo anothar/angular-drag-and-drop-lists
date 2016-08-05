@@ -71,4 +71,6 @@ body {
 
 .dndDragging{
     z-index:99999;
+    display:block;
+    position:absolute;
 }
