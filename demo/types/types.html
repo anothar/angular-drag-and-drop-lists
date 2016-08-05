@@ -1,6 +1,6 @@
 <ul dnd-list="list.people" dnd-dragover="dragover(list,item)">
 
-    <li ng-repeat="person in list.people" dnd-handle="'.handle'" dnd-draggable="person" dnd-moved="list.people.splice($index, 1)"
+    <li ng-repeat="person in list.people" dnd-handle="'.handle'" dnd-draggable="person" dnd-moved="moved(list,$index)"
         class="background-{{person.type}}">
         <div class="item">
             <div class="handle">:::</div>

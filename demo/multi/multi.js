@@ -35,6 +35,7 @@ angular.module("demo").controller("MultiDemoController", function ($scope) {
         i--;
       }
     }
+    return true;
   }
   // Generate the initial model
   angular.forEach($scope.models, function (list) {

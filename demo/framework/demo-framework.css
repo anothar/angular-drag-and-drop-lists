@@ -71,11 +71,4 @@ body {
 
 .dndDragging{
     z-index:99999;
-    height: 0;
-    display:flex !important;
-    width:100%;
-}
-
-.dndDragging .item{
-    padding:10px 15px;
 }

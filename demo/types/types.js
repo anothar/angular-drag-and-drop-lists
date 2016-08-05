@@ -1,6 +1,9 @@
-angular.module("demo").controller("TypesDemoController", function($scope) {
-    $scope.dragover=function(list,item){
-        return (list.allowedTypes.indexOf(item.type)>=0)&&(list.people.length<list.max);
+angular.module("demo").controller("TypesDemoController", function ($scope) {
+    $scope.dragover = function (list, item) {
+        return (list.allowedTypes.indexOf(item.type) >= 0) && (list.people.length < list.max);
+    };
+    $scope.moved = function (list, $index) {
+        list.people.splice($index, 1); return true;
     };
     $scope.lists = [
         {
@@ -8,9 +11,9 @@ angular.module("demo").controller("TypesDemoController", function($scope) {
             allowedTypes: ['man'],
             max: 4,
             people: [
-                {name: "Bob", type: "man"},
-                {name: "Charlie", type: "man"},
-                {name: "Dave", type: "man"}
+                { name: "Bob", type: "man" },
+                { name: "Charlie", type: "man" },
+                { name: "Dave", type: "man" }
             ]
         },
         {
@@ -18,9 +21,9 @@ angular.module("demo").controller("TypesDemoController", function($scope) {
             allowedTypes: ['woman'],
             max: 4,
             people: [
-                {name: "Alice", type: "woman"},
-                {name: "Eve", type: "woman"},
-                {name: "Peggy", type: "woman"}
+                { name: "Alice", type: "woman" },
+                { name: "Eve", type: "woman" },
+                { name: "Peggy", type: "woman" }
             ]
         },
         {
@@ -28,17 +31,17 @@ angular.module("demo").controller("TypesDemoController", function($scope) {
             allowedTypes: ['man', 'woman'],
             max: 6,
             people: [
-                {name: "Frank", type: "man"},
-                {name: "Mallory", type: "woman"},
-                {name: "Alex", type: "unknown"},
-                {name: "Oscar", type: "man"},
-                {name: "Wendy", type: "woman"}
+                { name: "Frank", type: "man" },
+                { name: "Mallory", type: "woman" },
+                { name: "Alex", type: "unknown" },
+                { name: "Oscar", type: "man" },
+                { name: "Wendy", type: "woman" }
             ]
         }
     ];
 
     // Model to JSON for demo purpose
-    $scope.$watch('lists', function(lists) {
+    $scope.$watch('lists', function (lists) {
         $scope.modelAsJson = angular.toJson(lists, true);
     }, true);
 

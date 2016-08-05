@@ -53,18 +53,10 @@ module dndList {
                     element.append(placeholder);
                 }
                 var dragTarget: HTMLElement;
-                //@anothar z-index not always works-but we have to use it if item in the same list
-                //if (self.dndService.draggingElement.parentNode == listNode) {
-                    var zIndex = source.css('z-index');
-                    source.css('z-index', -99999);
-                    dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
-                    source.css('z-index', zIndex);
-                // } else {
-                //     var display = source.css('display');
-                //     source.css('display', 'none');
-                //     dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
-                //     source.css('display', display);
-                // }
+                var display = source.css('display');
+                source.css('display', 'none');
+                dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
+                source.css('display', display);
                 if (dragTarget !== listNode) {
                     // Try to find the node direct directly below the list node.
                     var listItemNode = dragTarget;
@@ -97,6 +89,8 @@ module dndList {
                 transferredObject = angular.copy(transferredObject);
                 self.$timeout(() => {
                     if (self.dndService.stopDrop) {
+                        self.dndService.isDroped = false;
+                        self.dndService.draggingElementScope.endDrag();
                         return self.stopDragover(placeholder, element);
                     }
 
@@ -111,6 +105,8 @@ module dndList {
                         return self.stopDragover(placeholder, element);
                     }
                     self.dndService.isDroped = true;
+                    self.dndService.draggingElementScope.endDrag(event);
+                    index = self.getPlaceholderIndex(listNode, placeholderNode);
                     if (attrs.dndDrop) {
                         transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
                         if (!transferredObject) {

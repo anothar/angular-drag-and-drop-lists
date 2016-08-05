@@ -6,7 +6,8 @@ module dndList {
         draggingObject: any,
         isDroped: boolean
         stopDrop: boolean,
-        draggingElement: any
+        draggingElement: any,
+        draggingElementScope:any
     }
     /**
      * DndService
@@ -16,6 +17,7 @@ module dndList {
         public stopDrop: boolean;
         public isDroped: boolean;
         public draggingElement: any;
+        public draggingElementScope:any;
     }
 
     angular.module('dndLists', []).service('dndService',
