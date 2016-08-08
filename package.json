@@ -9,6 +9,7 @@
     "angular": "~1.4.9",
     "angular-mocks": "~1.4.9",
     "gulp-concat": "^2.6.0",
+    "gulp-webserver": "^0.9.1",
     "http-server": "~0.6.1",
     "jasmine-core": "~2.4.1",
     "jquery": "~2.2.0",
