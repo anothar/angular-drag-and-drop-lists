@@ -43,6 +43,7 @@ module dndList {
             }).on('dragenter', (event) => {
                 dropX = 0;
                 dropY = 0;
+                self.dndService.isDroped = false;
             }).on('dragleave', (event) => {
                 return self.stopDragover(placeholder, element);
             }).on('dropmove', (event) => {
@@ -83,6 +84,9 @@ module dndList {
 
                 element.addClass("dndDragover");
             }).on('drop', (event) => {
+                //disable dupl;icate invoke
+                if (self.dndService.isDroped)
+                    return;
                 var transferredObject = self.dndService.draggingObject;
                 if (!transferredObject)
                     return self.stopDragover(placeholder, element);
@@ -105,7 +109,8 @@ module dndList {
                         return self.stopDragover(placeholder, element);
                     }
                     self.dndService.isDroped = true;
-                    self.dndService.draggingElementScope.endDrag(event);
+                    if (!self.dndService.draggingElementScope.endDrag(event))
+                        return self.stopDragover(placeholder, element);
                     index = self.getPlaceholderIndex(listNode, placeholderNode);
                     if (attrs.dndDrop) {
                         transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);

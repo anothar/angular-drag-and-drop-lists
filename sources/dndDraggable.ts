@@ -5,7 +5,7 @@
 
 module dndList {
     interface DndDraggableScope extends angular.IScope {
-        endDrag: (event) => void
+        endDrag: (event) => boolean
     }
 
     @dndList.directive('$parse', '$timeout', 'dndService')
@@ -69,14 +69,18 @@ module dndList {
                 if (self.dndService.isDroped) {
                     if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
                         restoreState();
+                        self.dndService.isDroped = false;
+                        return false;
                     }
                 }
                 else {
                     restoreState();
                     self.$parse(attrs.dndCanceled)(scope, { event: event });
+                    return false;
                 }
                 self.$parse(attrs.dndDragend)(scope, { event: event, isDroped: self.dndService.isDroped });
                 self.dndService.isDroped = false;
+                return true;
             };
             var registerDrag = (elements: any) => {
                 if (typeof elements == 'string') {
@@ -87,7 +91,7 @@ module dndList {
                 }
                 interact(elements).draggable({
                     inertia: true,
-                    autoScroll: true,
+                    autoScroll: false,
                 }).on('dragstart', (event) => {
                     if (isDragging) return;
                     isDragging = true;

@@ -102,14 +102,18 @@ var dndList;
                     if (self.dndService.isDroped) {
                         if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
                             restoreState();
+                            self.dndService.isDroped = false;
+                            return false;
                         }
                     }
                     else {
                         restoreState();
                         self.$parse(attrs.dndCanceled)(scope, { event: event });
+                        return false;
                     }
                     self.$parse(attrs.dndDragend)(scope, { event: event, isDroped: self.dndService.isDroped });
                     self.dndService.isDroped = false;
+                    return true;
                 };
                 var registerDrag = function (elements) {
                     if (typeof elements == 'string') {
@@ -120,7 +124,7 @@ var dndList;
                     }
                     interact(elements).draggable({
                         inertia: true,
-                        autoScroll: true,
+                        autoScroll: false,
                     }).on('dragstart', function (event) {
                         if (isDragging)
                             return;
@@ -242,6 +246,7 @@ var dndList;
                 interact(element[0]).dropzone({}).on('dragenter', function (event) {
                     dropX = 0;
                     dropY = 0;
+                    self.dndService.isDroped = false;
                 }).on('dragleave', function (event) {
                     return self.stopDragover(placeholder, element);
                 }).on('dropmove', function (event) {
@@ -274,6 +279,8 @@ var dndList;
                     }
                     element.addClass("dndDragover");
                 }).on('drop', function (event) {
+                    if (self.dndService.isDroped)
+                        return;
                     var transferredObject = self.dndService.draggingObject;
                     if (!transferredObject)
                         return self.stopDragover(placeholder, element);
@@ -292,7 +299,8 @@ var dndList;
                             return self.stopDragover(placeholder, element);
                         }
                         self.dndService.isDroped = true;
-                        self.dndService.draggingElementScope.endDrag(event);
+                        if (!self.dndService.draggingElementScope.endDrag(event))
+                            return self.stopDragover(placeholder, element);
                         index = self.getPlaceholderIndex(listNode, placeholderNode);
                         if (attrs.dndDrop) {
                             transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
