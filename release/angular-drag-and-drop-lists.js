@@ -301,9 +301,7 @@ var dndList;
                             }
                         }
                         if (transferredObject !== true) {
-                            scope.$apply(function () {
-                                scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
-                            });
+                            scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
                         }
                         self.invokeCallback(scope, attrs.dndInserted, event, index, transferredObject);
                         self.stopDragover(placeholder, element);

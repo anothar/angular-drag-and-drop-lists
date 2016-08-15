@@ -53,21 +53,10 @@ module dndList {
                     element.append(placeholder);
                 }
                 var dragTarget: HTMLElement;
-                //@anothar z-index not always works-but we have to use it if item in the same list
-                //if (self.dndService.draggingElement.parentNode == listNode) {
-                    // var zIndex = source.css('z-index');
-                    // source.css('z-index', -99999);
-                    // dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
-                    // source.css('z-index', zIndex);
-                // } else {
-                    var display = source.css('display');
-                    //var zIndex = source.css('z-index');
-                    //source.css('z-index', -99999);
-                    source.css('display', 'none');
-                    dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
-                    source.css('display', display);
-                    //source.css('z-index', zIndex);
-                // }
+                var display = source.css('display');
+                source.css('display', 'none');
+                dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
+                source.css('display', display);
                 if (dragTarget !== listNode) {
                     // Try to find the node direct directly below the list node.
                     var listItemNode = dragTarget;
@@ -100,7 +89,7 @@ module dndList {
                 transferredObject = angular.copy(transferredObject);
                 self.$timeout(() => {
                     if (self.dndService.stopDrop) {
-                        self.dndService.isDroped=false;
+                        self.dndService.isDroped = false;
                         self.dndService.draggingElementScope.endDrag();
                         return self.stopDragover(placeholder, element);
                     }
@@ -127,9 +116,7 @@ module dndList {
 
                     // Insert the object into the array, unless dnd-drop took care of that (returned true).
                     if (transferredObject !== true) {
-                        scope.$apply(function () {
-                            scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
-                        });
+                        scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
                     }
                     self.invokeCallback(scope, attrs.dndInserted, event, index, transferredObject);
 
