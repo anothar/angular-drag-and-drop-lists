@@ -136,9 +136,6 @@ module dndList {
                         var list = lists[i];
                         interact(list).dropzone(true);
                     }
-                    var target = <HTMLElement>element[0];
-                    target.style.webkitTransform = null;
-                    target.style.transform = null;
                     self.$timeout(() => { scope.endDrag(event); }, 0);
                 }).on('dragmove', (event) => {
                     var rect = element[0].getBoundingClientRect();

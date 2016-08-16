@@ -169,9 +169,6 @@ var dndList;
                             var list = lists[i];
                             interact(list).dropzone(true);
                         }
-                        var target = element[0];
-                        target.style.webkitTransform = null;
-                        target.style.transform = null;
                         self.$timeout(function () { scope.endDrag(event); }, 0);
                     }).on('dragmove', function (event) {
                         var rect = element[0].getBoundingClientRect();
