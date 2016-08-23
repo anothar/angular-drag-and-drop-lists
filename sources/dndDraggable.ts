@@ -5,7 +5,8 @@
 
 module dndList {
     interface DndDraggableScope extends angular.IScope {
-        endDrag: (event) => boolean
+        endDrag: (event) => boolean,
+        disabled: boolean
     }
 
     @dndList.directive('$parse', '$timeout', 'dndService')
@@ -22,13 +23,25 @@ module dndList {
             var mouseY = 0;
             var transformX = 0;
             var transformY = 0;
-            var nodrop: boolean = false;
             var parent: HTMLElement;
             var nextElement: HTMLElement;
             var initwidth;
             var initheight;
             var isDragging = false;
+            if (attrs.ngDisabled) {
+                scope.disabled = scope.$eval(attrs.ngDisabled);
+                scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
+                    scope.disabled = <boolean>newValue;
+                    if (!newValue)
+                        registerDrag(draggableElements);
+                    else {
+                        unregisterDrag();
+                        scope.endDrag(null);
+                    }
+                });
+            }
             element.on('click touchstart', function (event) {
+                if (scope.disabled) return;
                 if (!attrs.dndSelected) return;
 
                 scope.$apply(function () {
@@ -38,14 +51,9 @@ module dndList {
                 // Prevent triggering dndSelected in parent elements.
                 event.stopPropagation();
             });
-            var unregisterDrag = (elements: any) => {
-                if (typeof elements == 'string') {
-                    elements = element[0].querySelectorAll(elements);
-                    for (var i = 0; i < elements.length; i++)
-                        unregisterDrag(elements[i]);
-                    return;
-                }
-                interact(elements).draggable(false);
+            var draggableElements: any;
+            var unregisterDrag = () => {
+                interact(draggableElements).draggable(false);
             }
             scope.endDrag = (event) => {
                 if (!isDragging) return;
@@ -89,11 +97,13 @@ module dndList {
                         registerDrag(elements[i]);
                     return;
                 }
+                draggableElements = elements;
                 interact(elements).draggable({
                     inertia: true,
                     autoScroll: false,
                 }).on('dragstart', (event) => {
                     if (isDragging) return;
+                    if (scope.disabled) return;
                     isDragging = true;
                     var target = <HTMLElement>element[0];
                     var lists = target.querySelectorAll('[dnd-list]');
@@ -123,7 +133,6 @@ module dndList {
                         target.style.transform =
                         'translate(' + transformX + 'px, ' + transformY + 'px)';
                     self.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
-                    self.dndService.stopDrop = nodrop;
                     self.dndService.isDroped = false;
                     self.dndService.draggingElementScope = scope;
                     self.dndService.draggingElement = element[0];
@@ -131,6 +140,7 @@ module dndList {
                         self.$parse(attrs.dndDragstart)(scope, { event: event });
                     }, 0);
                 }).on('dragend', (event) => {
+                    if (scope.disabled) return;
                     var lists = element[0].querySelectorAll('[dnd-list]');
                     for (var i = 0; i < lists.length; i++) {
                         var list = lists[i];
@@ -138,6 +148,7 @@ module dndList {
                     }
                     self.$timeout(() => { scope.endDrag(event); }, 0);
                 }).on('dragmove', (event) => {
+                    if (scope.disabled) return;
                     var rect = element[0].getBoundingClientRect();
                     var target = <HTMLElement>element[0];
                     // translate the element
@@ -147,6 +158,7 @@ module dndList {
                         target.style.transform =
                         'translate(' + transformX + 'px, ' + transformY + 'px)';
                 }).on('hold', function (event) {
+                    if (scope.disabled) return;
                     var interaction = event.interaction;
 
                     if (!interaction.interacting()) {
@@ -156,26 +168,16 @@ module dndList {
                     }
                 });
             }
+
             if (attrs.dndHandle) {
                 var handleString = scope.$eval(attrs.dndHandle);
                 registerDrag(handleString);
                 scope.$watch(attrs.dndHandle, function (newValue, oldValue, scope) {
-                    unregisterDrag(oldValue);
+                    unregisterDrag();
                     registerDrag(newValue);
                 });
             } else {
                 registerDrag(element[0]);
-            }
-
-            if (attrs.dndNodrop) {
-                nodrop = scope.$eval(attrs.dndNodrop);
-                scope.$watch(attrs.dndNodrop, function (value) {
-                    if (value == true)
-                        interact(element[0]).draggable(false);
-                    else
-                        interact(element[0]).draggable(true);
-                    nodrop = <boolean>value;
-                });
             }
         }
     }

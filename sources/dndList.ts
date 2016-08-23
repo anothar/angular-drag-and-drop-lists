@@ -5,7 +5,7 @@
 
 module dndList {
     interface DndListScope extends angular.IScope {
-
+        disabled: boolean
     }
 
     @dndList.directive('$parse', '$timeout', 'dndService')
@@ -41,12 +41,14 @@ module dndList {
             var unsubscribeDragStart: () => void;
             interact(element[0]).dropzone({
             }).on('dragenter', (event) => {
+                if (scope.disabled) return;
                 dropX = 0;
                 dropY = 0;
                 self.dndService.isDroped = false;
             }).on('dragleave', (event) => {
                 return self.stopDragover(placeholder, element);
             }).on('dropmove', (event) => {
+                if (scope.disabled) return self.stopDragover(placeholder, element);
                 var source = angular.element(self.dndService.draggingElement);
                 // First of all, make sure that the placeholder is shown
                 // This is especially important if the list is empty
@@ -84,9 +86,10 @@ module dndList {
 
                 element.addClass("dndDragover");
             }).on('drop', (event) => {
-                //disable dupl;icate invoke
+                //disable duplicate invoke
                 if (self.dndService.isDroped)
                     return;
+                if (scope.disabled) return self.stopDragover(placeholder, element);
                 var transferredObject = self.dndService.draggingObject;
                 if (!transferredObject)
                     return self.stopDragover(placeholder, element);
@@ -128,6 +131,19 @@ module dndList {
                     self.stopDragover(placeholder, element);
                 }, 0);
             });
+            if (attrs.ngDisabled) {
+                scope.disabled = scope.$eval(attrs.ngDisabled);
+                if (scope.disabled)
+                    interact(element[0]).dropzone(false);
+                scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
+                    scope.disabled = <boolean>newValue;
+                    if (!newValue)
+                        interact(element[0]).dropzone(true);
+                    else {
+                        interact(element[0]).dropzone(false);
+                    }
+                });
+            }
         }
 
         stopDragover(placeholder, element) {
