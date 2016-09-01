@@ -111,15 +111,21 @@ module dndList {
                             index, transferredObject)) {
                         return self.stopDragover(placeholder, element);
                     }
+                    if(attrs.dndBeforeDrop)
+                    {
+                        var result = self.invokeCallback(scope, attrs.dndBeforeDrop, event, index, transferredObject);
+                        if (!result) {
+                            self.dndService.isDroped = false;
+                            self.dndService.draggingElementScope.endDrag(event);
+                            return self.stopDragover(placeholder, element);
+                        }
+                    }
                     self.dndService.isDroped = true;
                     if (!self.dndService.draggingElementScope.endDrag(event))
                         return self.stopDragover(placeholder, element);
                     index = self.getPlaceholderIndex(listNode, placeholderNode);
                     if (attrs.dndDrop) {
                         transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
-                        if (!transferredObject) {
-                            return self.stopDragover(placeholder, element);
-                        }
                     }
 
                     // Insert the object into the array, unless dnd-drop took care of that (returned true).

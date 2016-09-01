@@ -307,15 +307,20 @@ var dndList;
                             !self.invokeCallback(scope, attrs.dndDragover, event, index, transferredObject)) {
                             return self.stopDragover(placeholder, element);
                         }
+                        if (attrs.dndBeforeDrop) {
+                            var result = self.invokeCallback(scope, attrs.dndBeforeDrop, event, index, transferredObject);
+                            if (!result) {
+                                self.dndService.isDroped = false;
+                                self.dndService.draggingElementScope.endDrag(event);
+                                return self.stopDragover(placeholder, element);
+                            }
+                        }
                         self.dndService.isDroped = true;
                         if (!self.dndService.draggingElementScope.endDrag(event))
                             return self.stopDragover(placeholder, element);
                         index = self.getPlaceholderIndex(listNode, placeholderNode);
                         if (attrs.dndDrop) {
                             transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
-                            if (!transferredObject) {
-                                return self.stopDragover(placeholder, element);
-                            }
                         }
                         if (transferredObject !== true) {
                             scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
