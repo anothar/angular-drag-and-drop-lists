@@ -44,7 +44,7 @@
  * half of the element we are dragging over. In other
  * browsers we can use event.offsetY for this.
  */
-.simpleDemo ul[dnd-list] li {
+.simpleDemo-item {
     background-color: #fff;
     border: 1px solid #ddd;
     border-top-right-radius: 4px;
@@ -57,7 +57,7 @@
 /**
  * Show selected elements in green
  */
-.simpleDemo ul[dnd-list] li.selected {
+.simpleDemo-item.selected {
     background-color: #dff0d8;
     color: #3c763d;
 }

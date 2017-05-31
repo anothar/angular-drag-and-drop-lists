@@ -3,8 +3,9 @@
         dnd-dragstart="item.dragging=true;list.dragging=true;"
         dnd-moved="moved(list)"
         dnd-dragend="list.dragging = false;item.dragging=false;"
-        dnd-selected="item.selected = !item.selected" ng-class="{'selected': item.selected}"
+        dnd-selected="select(item)" ng-class="{'selected': item.selected}"
         ng-hide="item.selected&&list.dragging&&!item.dragging"
+        dnd-canceled="cancel(list)"
         dnd-selected="item.selected=!item.selected">
         <div class="item">
             <span>

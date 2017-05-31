@@ -26,6 +26,8 @@ gulp.task('compile', function () {
     })).pipe(gulp.dest('release'));
 });
 
-gulp.task('default', ['compile'], function () {
-    return gulp.watch('sources/**/*.ts', ['compile']);
-})
+gulp.task('watch', function () {
+    return gulp.watch('sources/**/*.ts', gulp.series('compile'));
+});
+
+gulp.task('default', gulp.series('compile','watch'));

@@ -21,13 +21,28 @@ angular.module("demo").controller("MultiDemoController", function ($scope) {
    * true, the dnd-list directive won't do the insertion itself.
    */
   $scope.onDrop = function (list, items, index) {
+    console.log('drop');
     angular.forEach(items, function (item) { item.selected = false; item.dragging = false; });
     list.items = list.items.slice(0, index)
       .concat(items)
       .concat(list.items.slice(index));
     return true;
   }
+  $scope.select=function(item){
+     console.log('select');
+     item.selected = !item.selected;
+  }
+  $scope.cancel= function (list) {
+    console.log('cancel');
+    list.dragging=false;
+    for (var i = 0; i < list.items.length; i++) {
+      var item = list.items[i];
+      item.dragging=false;
+    }
+    return true;
+  }
   $scope.moved = function (list) {
+    console.log('moved');
     for (var i = 0; i < list.items.length; i++) {
       var item = list.items[i];
       if (item.selected) {
