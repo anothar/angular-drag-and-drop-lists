@@ -62,6 +62,95 @@ var dndList;
                 var initwidth;
                 var initheight;
                 var isDragging = false;
+                var registerDrag = function (elements) {
+                    if (typeof elements == 'string') {
+                        elements = element[0].querySelectorAll(elements);
+                        for (var i = 0; i < elements.length; i++)
+                            registerDrag(elements[i]);
+                        return;
+                    }
+                    draggableElements = elements;
+                    interact(elements).draggable({
+                        manualStart: true
+                    }).on('move', function (event) {
+                        if (isDragging)
+                            return;
+                        if (scope.disabled)
+                            return;
+                        var interaction = event.interaction;
+                        if (!interaction.pointerIsDown || interaction.interacting())
+                            return;
+                        angular.element(document.body).addClass('dndDraggingBody');
+                        isDragging = true;
+                        var source = element[0];
+                        var lists = source.querySelectorAll('[dnd-list]');
+                        for (var i = 0; i < lists.length; i++) {
+                            var list = lists[i];
+                            interact(list).dropzone(false);
+                        }
+                        var rect = source.getBoundingClientRect();
+                        mouseX = rect.left - event.clientX;
+                        mouseY = rect.top - event.clientY;
+                        transformX = 0;
+                        transformY = 0;
+                        var newNode = element[0].cloneNode(true);
+                        var newElement = angular.element(newNode);
+                        parent = element.parent()[0];
+                        initheight = element.css('height');
+                        initwidth = element.css('width');
+                        nextElement = source.nextElementSibling;
+                        newElement.addClass("dndDragging");
+                        newElement.css('width', rect.width + "px");
+                        newElement.css('height', rect.height + "px");
+                        document.body.appendChild(newElement[0]);
+                        rect = source.getBoundingClientRect();
+                        transformX += event.clientX - rect.left + mouseX;
+                        transformY += event.clientY - rect.top + mouseY;
+                        newNode.style.webkitTransform =
+                            newNode.style.transform =
+                                'translate(' + transformX + 'px, ' + transformY + 'px)';
+                        self.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
+                        self.dndService.isDroped = false;
+                        self.dndService.draggingElementScope = scope;
+                        self.dndService.draggingElement = newNode;
+                        self.$timeout(function () {
+                            self.$parse(attrs.dndDragstart)(scope, { event: event });
+                        }, 0);
+                        interact(newNode).draggable({
+                            inertia: true,
+                            autoScroll: false,
+                        });
+                        event.interaction.start({ name: 'drag' }, event.interactable, newNode);
+                        source.style.display = 'none';
+                    }).on('dragend', function (event) {
+                        if (scope.disabled)
+                            return;
+                        event.interaction.stop();
+                        if (!event.target || !event.target.parentNode)
+                            return;
+                        event.target.parentNode.removeChild(event.target);
+                        var lists = element[0].querySelectorAll('[dnd-list]');
+                        for (var i = 0; i < lists.length; i++) {
+                            var list = lists[i];
+                            interact(list).dropzone(true);
+                        }
+                        self.$timeout(function () {
+                            scope.endDrag(event);
+                            element[0].style.display = 'block';
+                            angular.element(document.body).removeClass('dndDraggingBody');
+                        }, 0);
+                    }).on('dragmove', function (event) {
+                        if (scope.disabled)
+                            return;
+                        var rect = event.target.getBoundingClientRect();
+                        var target = event.target;
+                        transformX += event.clientX - rect.left + mouseX;
+                        transformY += event.clientY - rect.top + mouseY;
+                        target.style.webkitTransform =
+                            target.style.transform =
+                                'translate(' + transformX + 'px, ' + transformY + 'px)';
+                    });
+                };
                 if (attrs.ngDisabled) {
                     scope.disabled = scope.$eval(attrs.ngDisabled);
                     scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
@@ -85,7 +174,7 @@ var dndList;
                     event.stopPropagation();
                 };
                 var registerClick = function () {
-                    element.off(clickHandler);
+                    element.off('click touchstart', clickHandler);
                     element.on('click touchstart', clickHandler);
                 };
                 registerClick();
@@ -128,91 +217,6 @@ var dndList;
                     self.$parse(attrs.dndDragend)(scope, { event: event, isDroped: self.dndService.isDroped });
                     self.dndService.isDroped = false;
                     return true;
-                };
-                var registerDrag = function (elements) {
-                    if (typeof elements == 'string') {
-                        elements = element[0].querySelectorAll(elements);
-                        for (var i = 0; i < elements.length; i++)
-                            registerDrag(elements[i]);
-                        return;
-                    }
-                    draggableElements = elements;
-                    interact(elements).draggable({
-                        manualStart: true
-                    }).on('move', function (event) {
-                        if (isDragging)
-                            return;
-                        if (scope.disabled)
-                            return;
-                        var interaction = event.interaction;
-                        if (!interaction.pointerIsDown || interaction.interacting())
-                            return;
-                        isDragging = true;
-                        var source = element[0];
-                        var lists = source.querySelectorAll('[dnd-list]');
-                        for (var i = 0; i < lists.length; i++) {
-                            var list = lists[i];
-                            interact(list).dropzone(false);
-                        }
-                        var rect = source.getBoundingClientRect();
-                        mouseX = rect.left - event.clientX;
-                        mouseY = rect.top - event.clientY;
-                        transformX = 0;
-                        transformY = 0;
-                        var newNode = element[0].cloneNode(true);
-                        var newElement = angular.element(newNode);
-                        parent = element.parent()[0];
-                        initheight = element.css('height');
-                        initwidth = element.css('width');
-                        nextElement = source.nextElementSibling;
-                        newElement.addClass("dndDragging");
-                        newElement.css('width', rect.width + "px");
-                        newElement.css('height', rect.height + "px");
-                        document.body.appendChild(newElement[0]);
-                        rect = source.getBoundingClientRect();
-                        transformX += event.clientX - rect.left + mouseX;
-                        transformY += event.clientY - rect.top + mouseY;
-                        newNode.style.webkitTransform =
-                            newNode.style.transform =
-                                'translate(' + transformX + 'px, ' + transformY + 'px)';
-                        self.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
-                        self.dndService.isDroped = false;
-                        self.dndService.draggingElementScope = scope;
-                        self.dndService.draggingElement = newNode;
-                        self.$timeout(function () {
-                            self.$parse(attrs.dndDragstart)(scope, { event: event });
-                        }, 0);
-                        interact(newNode).draggable({
-                            inertia: true,
-                            autoScroll: false,
-                        });
-                        event.interaction.start({ name: 'drag' }, event.interactable, newNode);
-                        source.style.display = 'none';
-                        angular.element(document.body).addClass('dndDraggingBody');
-                    }).on('dragend', function (event) {
-                        element[0].style.display = 'block';
-                        event.target.remove();
-                        angular.element(document.body).removeClass('dndDraggingBody');
-                        if (scope.disabled)
-                            return;
-                        var lists = element[0].querySelectorAll('[dnd-list]');
-                        for (var i = 0; i < lists.length; i++) {
-                            var list = lists[i];
-                            interact(list).dropzone(true);
-                        }
-                        self.$timeout(function () { scope.endDrag(event); }, 0);
-                    }).on('dragmove', function (event) {
-                        if (scope.disabled)
-                            return;
-                        var rect = event.target.getBoundingClientRect();
-                        var target = event.target;
-                        transformX += event.clientX - rect.left + mouseX;
-                        transformY += event.clientY - rect.top + mouseY;
-                        target.style.webkitTransform =
-                            target.style.transform =
-                                'translate(' + transformX + 'px, ' + transformY + 'px)';
-                    });
-                    ;
                 };
                 if (attrs.dndHandle) {
                     var handleString = scope.$eval(attrs.dndHandle);

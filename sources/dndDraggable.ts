@@ -28,75 +28,6 @@ module dndList {
             var initwidth;
             var initheight;
             var isDragging = false;
-            if (attrs.ngDisabled) {
-                scope.disabled = scope.$eval(attrs.ngDisabled);
-                scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
-                    scope.disabled = <boolean>newValue;
-                    if (!newValue)
-                        registerDrag(draggableElements);
-                    else {
-                        unregisterDrag();
-                        scope.endDrag(null);
-                    }
-                });
-            }
-            var clickHandler = function (event) {
-                if (scope.disabled) return;
-                if (!attrs.dndSelected) return;
-
-                scope.$apply(function () {
-                    self.$parse(attrs.dndSelected)(scope, { event: event });
-                });
-
-                // Prevent triggering dndSelected in parent elements.
-                event.stopPropagation();
-            };
-            var registerClick = () => {
-                element.off(clickHandler);
-                element.on('click touchstart', clickHandler);
-            };
-            registerClick();
-            var draggableElements: any;
-            var unregisterDrag = () => {
-                interact(draggableElements).draggable(false);
-            }
-            scope.endDrag = (event) => {
-                if (!isDragging) return;
-                isDragging = false;
-                var target = <HTMLElement>element[0];
-                target.style.webkitTransform = null;
-                target.style.transform = null;
-                element.removeClass("dndDragging");
-                element.remove();
-                var restoreState = function () {
-                    element.css('height', initheight);
-                    element.css('width', initwidth);
-                    if (nextElement)
-                        parent.insertBefore(target, nextElement);
-                    else
-                        parent.appendChild(target);
-                    target.style.webkitTransform = null;
-                    //@anothar fix for IE
-                    target.style.transform = "translate(0,0)";
-                    //@anothar fix for click event
-                    registerClick();
-                }
-                if (self.dndService.isDroped) {
-                    if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
-                        restoreState();
-                        self.dndService.isDroped = false;
-                        return false;
-                    }
-                }
-                else {
-                    restoreState();
-                    self.$parse(attrs.dndCanceled)(scope, { event: event });
-                    return false;
-                }
-                self.$parse(attrs.dndDragend)(scope, { event: event, isDroped: self.dndService.isDroped });
-                self.dndService.isDroped = false;
-                return true;
-            };
             var registerDrag = (elements: any) => {
                 if (typeof elements == 'string') {
                     elements = element[0].querySelectorAll(elements);
@@ -112,11 +43,12 @@ module dndList {
                     if (isDragging) return;
                     if (scope.disabled) return;
                     var interaction = event.interaction;
-                    
+                   
                     // if the pointer was moved while being held down
                     // and an interaction hasn't started yet
                     if (!interaction.pointerIsDown || interaction.interacting())
                         return;
+                    angular.element(document.body).addClass('dndDraggingBody');
                     isDragging = true;
                     var source = <HTMLElement>element[0];
                     var lists = source.querySelectorAll('[dnd-list]');
@@ -161,18 +93,25 @@ module dndList {
                     event.interaction.start({ name: 'drag' },
                         event.interactable, newNode);
                     source.style.display = 'none';
-                    angular.element(document.body).addClass('dndDraggingBody');
+                    
                 }).on('dragend', (event) => {
-                    element[0].style.display = 'block';
-                    event.target.remove();
-                    angular.element(document.body).removeClass('dndDraggingBody');
+                    
                     if (scope.disabled) return;
+                    event.interaction.stop();
+                    //I don't know why but in quickrun dragend is called twice
+                    if(!event.target||!event.target.parentNode)
+                        return;
+                    (<HTMLElement>event.target).parentNode.removeChild(event.target);
                     var lists = element[0].querySelectorAll('[dnd-list]');
                     for (var i = 0; i < lists.length; i++) {
                         var list = lists[i];
                         interact(list).dropzone(true);
                     }
-                    self.$timeout(() => { scope.endDrag(event); }, 0);
+                    self.$timeout(() => { 
+                        scope.endDrag(event); 
+                        element[0].style.display = 'block';
+                        angular.element(document.body).removeClass('dndDraggingBody');
+                    }, 0);
                 }).on('dragmove', (event) => {
                     if (scope.disabled) return;
                     var rect = event.target.getBoundingClientRect();
@@ -183,9 +122,78 @@ module dndList {
                     target.style.webkitTransform =
                         target.style.transform =
                         'translate(' + transformX + 'px, ' + transformY + 'px)';
-                });;
-
+                });
             }
+            if (attrs.ngDisabled) {
+                scope.disabled = scope.$eval(attrs.ngDisabled);
+                scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
+                    scope.disabled = <boolean>newValue;
+                    if (!newValue)
+                        registerDrag(draggableElements);
+                    else {
+                        unregisterDrag();
+                        scope.endDrag(null);
+                    }
+                });
+            }
+            var clickHandler = function (event) {
+                if (scope.disabled) return;
+                if (!attrs.dndSelected) return;
+
+                scope.$apply(function () {
+                    self.$parse(attrs.dndSelected)(scope, { event: event });
+                });
+
+                // Prevent triggering dndSelected in parent elements.
+                event.stopPropagation();
+            };
+            var registerClick = () => {
+                element.off('click touchstart', clickHandler);
+                element.on('click touchstart', clickHandler);
+            };
+            registerClick();
+            var draggableElements: any;
+            var unregisterDrag = () => {
+                interact(draggableElements).draggable(false);
+            }
+            scope.endDrag = (event) => {
+                if (!isDragging) return;
+                isDragging = false;
+                var target = <HTMLElement>element[0];
+                target.style.webkitTransform = null;
+                target.style.transform = null;
+                element.removeClass("dndDragging");
+                element.remove();
+                var restoreState = function () {
+                    element.css('height', initheight);
+                    element.css('width', initwidth);
+                    if (nextElement)
+                        parent.insertBefore(target, nextElement);
+                    else
+                        parent.appendChild(target);
+                    target.style.webkitTransform = null;
+                    //@anothar fix for IE
+                    target.style.transform = "translate(0,0)";
+                    //@anothar fix for click event
+                    registerClick();
+                }
+                if (self.dndService.isDroped) {
+                    if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
+                        restoreState();
+                        self.dndService.isDroped = false;
+                        return false;
+                    }
+                }
+                else {
+                    restoreState();
+                    self.$parse(attrs.dndCanceled)(scope, { event: event });
+                    return false;
+                }
+                self.$parse(attrs.dndDragend)(scope, { event: event, isDroped: self.dndService.isDroped });
+                self.dndService.isDroped = false;
+                return true;
+            };
+            
 
             if (attrs.dndHandle) {
                 var handleString = scope.$eval(attrs.dndHandle);
