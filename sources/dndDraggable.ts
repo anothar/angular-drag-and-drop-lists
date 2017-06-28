@@ -159,33 +159,14 @@ module dndList {
             scope.endDrag = (event) => {
                 if (!isDragging) return;
                 isDragging = false;
-                var target = <HTMLElement>element[0];
-                target.style.webkitTransform = null;
-                target.style.transform = null;
                 element.removeClass("dndDragging");
-                element.remove();
-                var restoreState = function () {
-                    element.css('height', initheight);
-                    element.css('width', initwidth);
-                    if (nextElement)
-                        parent.insertBefore(target, nextElement);
-                    else
-                        parent.appendChild(target);
-                    target.style.webkitTransform = null;
-                    //@anothar fix for IE
-                    target.style.transform = "translate(0,0)";
-                    //@anothar fix for click event
-                    registerClick();
-                }
                 if (self.dndService.isDroped) {
                     if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
-                        restoreState();
                         self.dndService.isDroped = false;
                         return false;
                     }
                 }
                 else {
-                    restoreState();
                     self.$parse(attrs.dndCanceled)(scope, { event: event });
                     return false;
                 }
