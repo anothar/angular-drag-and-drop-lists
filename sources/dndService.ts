@@ -7,7 +7,8 @@ module dndList {
         isDroped: boolean
         stopDrop: boolean,
         draggingElement: any,
-        draggingElementScope:any
+        draggingElementScope:any,
+        draggingSourceElement:HTMLElement
     }
     /**
      * DndService
@@ -17,6 +18,7 @@ module dndList {
         public stopDrop: boolean;
         public isDroped: boolean;
         public draggingElement: any;
+        public draggingSourceElement:HTMLElement;
         public draggingElementScope:any;
     }
 

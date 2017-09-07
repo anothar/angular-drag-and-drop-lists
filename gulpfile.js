@@ -3,6 +3,7 @@ var ts = require('gulp-typescript');
 var minify = require('gulp-minify');
 var concat = require('gulp-concat');
 var webserver = require('gulp-webserver');
+var sourcemaps = require('gulp-sourcemaps');
 
 gulp.task('demo', function () {
     gulp.src('.')

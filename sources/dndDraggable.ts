@@ -16,7 +16,7 @@ module dndList {
             private dndService: IDndService) {
         }
 
-        public link: Function = (scope: DndDraggableScope, element: ng.IAugmentedJQuery,
+        public link: angular.IDirectiveLinkFn = (scope: DndDraggableScope, element: ng.IAugmentedJQuery,
             attrs: any): void => {
             var self = this;
             var mouseX = 0;
@@ -82,7 +82,7 @@ module dndList {
                     self.dndService.isDroped = false;
                     self.dndService.draggingElementScope = scope;
                     self.dndService.draggingElement = newNode;
-                    
+                    self.dndService.draggingSourceElement= <HTMLElement>element[0];
                     self.$timeout(() => {
                         self.$parse(attrs.dndDragstart)(scope, { event: event });
                     }, 0);

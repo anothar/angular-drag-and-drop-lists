@@ -113,6 +113,7 @@ var dndList;
                         self.dndService.isDroped = false;
                         self.dndService.draggingElementScope = scope;
                         self.dndService.draggingElement = newNode;
+                        self.dndService.draggingSourceElement = element[0];
                         self.$timeout(function () {
                             self.$parse(attrs.dndDragstart)(scope, { event: event });
                         }, 0);
@@ -318,7 +319,7 @@ var dndList;
                         self.dndService.isDroped = true;
                         if (!self.dndService.draggingElementScope.endDrag(event))
                             return self.stopDragover(placeholder, element);
-                        index = self.getPlaceholderIndex(listNode, placeholderNode);
+                        index = self.getPlaceholderIndexWithoutNode(listNode, placeholderNode, self.dndService.draggingSourceElement);
                         if (attrs.dndDrop) {
                             transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
                         }
@@ -361,6 +362,16 @@ var dndList;
         };
         DndList.prototype.getPlaceholderIndex = function (listNode, placeholderNode) {
             return Array.prototype.indexOf.call(listNode.children, placeholderNode);
+        };
+        DndList.prototype.getPlaceholderIndexWithoutNode = function (listNode, placeholderNode, ignoreNode) {
+            var result = 0;
+            for (var i = 0; i < listNode.children.length; i++, result++) {
+                if (listNode.children[i] == placeholderNode)
+                    return result;
+                if (listNode.children[i] == ignoreNode)
+                    result--;
+            }
+            return result;
         };
         DndList.prototype.invokeCallback = function (scope, expression, event, index, item) {
             if (item === void 0) { item = null; }

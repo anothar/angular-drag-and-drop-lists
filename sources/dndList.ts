@@ -25,7 +25,7 @@ module dndList {
             return mousePointer < targetPosition + targetSize / 2;
         }
 
-        public link: Function = (scope: DndListScope, element: ng.IAugmentedJQuery,
+        public link: angular.IDirectiveLinkFn = (scope: DndListScope, element: ng.IAugmentedJQuery,
             attrs: any): void => {
             // While an element is dragged over the list, this placeholder element is inserted
             // at the location where the element would be inserted after dropping
@@ -100,7 +100,6 @@ module dndList {
                         self.dndService.draggingElementScope.endDrag();
                         return self.stopDragover(placeholder, element);
                     }
-
                     // Invoke the callback, which can transform the transferredObject and even abort the drop.
                     var index = self.getPlaceholderIndex(listNode, placeholderNode);
                     if (index < 0)
@@ -120,10 +119,12 @@ module dndList {
                             return self.stopDragover(placeholder, element);
                         }
                     }
+                    
                     self.dndService.isDroped = true;
                     if (!self.dndService.draggingElementScope.endDrag(event))
                         return self.stopDragover(placeholder, element);
-                    index = self.getPlaceholderIndex(listNode, placeholderNode);
+                    index = self.getPlaceholderIndexWithoutNode(listNode, placeholderNode,
+                        self.dndService.draggingSourceElement);
                     if (attrs.dndDrop) {
                         transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
                     }
@@ -160,6 +161,18 @@ module dndList {
 
         getPlaceholderIndex(listNode, placeholderNode) {
             return Array.prototype.indexOf.call(listNode.children, placeholderNode);
+        }
+
+        getPlaceholderIndexWithoutNode(listNode, placeholderNode,ignoreNode) {
+            var result=0;
+            for(var i=0;i<listNode.children.length;i++,result++)
+                {
+                    if(listNode.children[i]==placeholderNode)
+                        return result;
+                    if(listNode.children[i]==ignoreNode)
+                        result--;
+                }
+                return result;
         }
 
         invokeCallback(scope, expression, event, index, item = null) {
