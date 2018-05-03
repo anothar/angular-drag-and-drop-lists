@@ -39,8 +39,10 @@ module dndList {
             var dropX = 0;
             var dropY = 0;
             var unsubscribeDragStart: () => void;
-            interact(element[0]).dropzone({
-            }).on('dragenter', (event) => {
+            var interactOptions:{accept?:HTMLElement|string}={};
+            if(attrs.dndAccept)
+                interactOptions.accept=attrs.dndAccept;
+            interact(element[0]).dropzone(interactOptions).on('dragenter', (event) => {
                 if (scope.disabled) return;
                 dropX = 0;
                 dropY = 0;

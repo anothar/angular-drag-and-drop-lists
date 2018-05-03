@@ -247,7 +247,10 @@ var dndList;
                 var dropX = 0;
                 var dropY = 0;
                 var unsubscribeDragStart;
-                interact(element[0]).dropzone({}).on('dragenter', function (event) {
+                var interactOptions = {};
+                if (attrs.dndAccept)
+                    interactOptions.accept = attrs.dndAccept;
+                interact(element[0]).dropzone(interactOptions).on('dragenter', function (event) {
                     if (scope.disabled)
                         return;
                     dropX = 0;
