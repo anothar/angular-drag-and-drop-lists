@@ -62,7 +62,7 @@ module dndList {
                 source.css('display', 'none');
                 dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
                 source.css('display', display);
-                if (dragTarget !== listNode) {
+                if (dragTarget&&dragTarget !== listNode) {
                     // Try to find the node direct directly below the list node.
                     var listItemNode = dragTarget;
                     while (listItemNode.parentNode !== listNode && listItemNode.parentNode) {
