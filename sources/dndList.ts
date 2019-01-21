@@ -5,7 +5,12 @@
 
 module dndList {
     interface DndListScope extends angular.IScope {
-        disabled: boolean
+        disabled: boolean,
+        scroll: {
+            auto: boolean,
+            timer?: any,
+            speed?: number
+        }
     }
 
     @dndList.directive('$parse', '$timeout', 'dndService')
@@ -24,6 +29,44 @@ module dndList {
             var targetPosition = horizontal ? rect.left : rect.top;
             return mousePointer < targetPosition + targetSize / 2;
         }
+        private startScroll(scope: DndListScope,listNode:HTMLElement,direction:1|-1)
+        {
+            this.stopScroll(scope);
+            this.performScroll(scope,listNode,direction);
+        }
+
+        private performScroll(scope: DndListScope,listNode:HTMLElement,direction:1|-1)
+        {
+            if(!scope.scroll.auto)
+                return;
+            var scrollOffset=0;
+            if(direction==1)
+            {
+                scrollOffset=scope.scroll.speed;
+                if(listNode.scrollTop+scrollOffset+listNode.offsetHeight>listNode.scrollHeight)
+                    scrollOffset=listNode.scrollHeight-listNode.scrollTop-listNode.offsetHeight;
+                if(scrollOffset<0)
+                    scrollOffset=0;
+            }
+            else if(direction==-1)
+            {
+                scrollOffset=-scope.scroll.speed;
+                if(listNode.scrollTop+scrollOffset<0)
+                    scrollOffset=-listNode.scrollTop;
+            }
+            listNode.scrollTop+=scrollOffset;
+            scope.scroll.timer=setTimeout(()=>{
+                this.performScroll(scope,listNode,direction);
+            },20);
+        }
+
+        private stopScroll(scope: DndListScope)
+        {
+            if(!scope.scroll.timer)
+                return;
+            clearTimeout(scope.scroll.timer);
+            scope.scroll.timer=null;
+        }
 
         public link: angular.IDirectiveLinkFn = (scope: DndListScope, element: ng.IAugmentedJQuery,
             attrs: any): void => {
@@ -40,14 +83,28 @@ module dndList {
             var dropY = 0;
             var unsubscribeDragStart: () => void;
             var interactOptions:{accept?:HTMLElement|string}={};
+            var scrollOffset=null;
+            scope.scroll={
+                auto:false
+            }
+            if(attrs.dndScroll)
+            {
+                scrollOffset=parseFloat(attrs.dndScroll);
+                scope.scroll={
+                    auto:true,
+                    speed:scrollOffset
+                }
+            }
             if(attrs.dndAccept)
                 interactOptions.accept=attrs.dndAccept;
             interact(element[0]).dropzone(interactOptions).on('dragenter', (event) => {
+                this.stopScroll(scope);
                 if (scope.disabled) return;
                 dropX = 0;
                 dropY = 0;
                 self.dndService.isDroped = false;
             }).on('dragleave', (event) => {
+                this.stopScroll(scope);
                 return self.stopDragover(placeholder, element);
             }).on('dropmove', (event) => {
                 if (scope.disabled) return self.stopDragover(placeholder, element);
@@ -85,9 +142,23 @@ module dndList {
                         self.getPlaceholderIndex(listNode, placeholderNode), self.dndService.draggingObject)) {
                     self.stopDragover(placeholder, element);
                 }
+                if(scrollOffset)
+                {
+                    var height=source[0].offsetHeight/2;
+                    var rect=listNode.getBoundingClientRect();
+                    if(event.dragEvent.clientY>=rect.bottom-height&&
+                        event.dragEvent.clientY<=rect.bottom+height)
+                            this.startScroll(scope,listNode,1);
+                    else if(event.dragEvent.clientY<=rect.top+height&&
+                        event.dragEvent.clientY>=rect.top-height)
+                            this.startScroll(scope,listNode,-1);
+                    else
+                        this.stopScroll(scope);
+                }
 
                 element.addClass("dndDragover");
             }).on('drop', (event) => {
+                this.stopScroll(scope);
                 //disable duplicate invoke
                 if (self.dndService.isDroped)
                     return;

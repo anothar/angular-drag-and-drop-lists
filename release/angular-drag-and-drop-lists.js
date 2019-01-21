@@ -248,15 +248,28 @@ var dndList;
                 var dropY = 0;
                 var unsubscribeDragStart;
                 var interactOptions = {};
+                var scrollOffset = null;
+                scope.scroll = {
+                    auto: false
+                };
+                if (attrs.dndScroll) {
+                    scrollOffset = parseFloat(attrs.dndScroll);
+                    scope.scroll = {
+                        auto: true,
+                        speed: scrollOffset
+                    };
+                }
                 if (attrs.dndAccept)
                     interactOptions.accept = attrs.dndAccept;
                 interact(element[0]).dropzone(interactOptions).on('dragenter', function (event) {
+                    _this.stopScroll(scope);
                     if (scope.disabled)
                         return;
                     dropX = 0;
                     dropY = 0;
                     self.dndService.isDroped = false;
                 }).on('dragleave', function (event) {
+                    _this.stopScroll(scope);
                     return self.stopDragover(placeholder, element);
                 }).on('dropmove', function (event) {
                     if (scope.disabled)
@@ -270,7 +283,7 @@ var dndList;
                     source.css('display', 'none');
                     dragTarget = document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
                     source.css('display', display);
-                    if (dragTarget !== listNode) {
+                    if (dragTarget && dragTarget !== listNode) {
                         var listItemNode = dragTarget;
                         while (listItemNode.parentNode !== listNode && listItemNode.parentNode) {
                             listItemNode = listItemNode.parentNode;
@@ -288,8 +301,21 @@ var dndList;
                         !self.invokeCallback(scope, attrs.dndDragover, event, self.getPlaceholderIndex(listNode, placeholderNode), self.dndService.draggingObject)) {
                         self.stopDragover(placeholder, element);
                     }
+                    if (scrollOffset) {
+                        var height = source[0].offsetHeight / 2;
+                        var rect = listNode.getBoundingClientRect();
+                        if (event.dragEvent.clientY >= rect.bottom - height &&
+                            event.dragEvent.clientY <= rect.bottom + height)
+                            _this.startScroll(scope, listNode, 1);
+                        else if (event.dragEvent.clientY <= rect.top + height &&
+                            event.dragEvent.clientY >= rect.top - height)
+                            _this.startScroll(scope, listNode, -1);
+                        else
+                            _this.stopScroll(scope);
+                    }
                     element.addClass("dndDragover");
                 }).on('drop', function (event) {
+                    _this.stopScroll(scope);
                     if (self.dndService.isDroped)
                         return;
                     if (scope.disabled)
@@ -357,6 +383,40 @@ var dndList;
             var targetSize = horizontal ? rect.width : rect.height;
             var targetPosition = horizontal ? rect.left : rect.top;
             return mousePointer < targetPosition + targetSize / 2;
+        };
+        DndList.prototype.startScroll = function (scope, listNode, direction) {
+            if (direction === void 0) { direction = 1 | -1; }
+            this.stopScroll(scope);
+            this.performScroll(scope, listNode, direction);
+        };
+        DndList.prototype.performScroll = function (scope, listNode, direction) {
+            var _this = this;
+            if (direction === void 0) { direction = 1 | -1; }
+            if (!scope.scroll.auto)
+                return;
+            var scrollOffset = 0;
+            if (direction == 1) {
+                scrollOffset = scope.scroll.speed;
+                if (listNode.scrollTop + scrollOffset + listNode.offsetHeight > listNode.scrollHeight)
+                    scrollOffset = listNode.scrollHeight - listNode.scrollTop - listNode.offsetHeight;
+                if (scrollOffset < 0)
+                    scrollOffset = 0;
+            }
+            else if (direction == -1) {
+                scrollOffset = -scope.scroll.speed;
+                if (listNode.scrollTop + scrollOffset < 0)
+                    scrollOffset = -listNode.scrollTop;
+            }
+            listNode.scrollTop += scrollOffset;
+            scope.scroll.timer = setTimeout(function () {
+                _this.performScroll(scope, listNode, direction);
+            }, 20);
+        };
+        DndList.prototype.stopScroll = function (scope) {
+            if (!scope.scroll.timer)
+                return;
+            clearTimeout(scope.scroll.timer);
+            scope.scroll.timer = null;
         };
         DndList.prototype.stopDragover = function (placeholder, element) {
             placeholder.remove();

@@ -21,6 +21,10 @@ angular.module("demo", ["ngRoute", "dndLists"])
                 templateUrl: 'multi/multi-frame.html',
                 controller: 'MultiDemoController'
             })
+            .when('/scroll', {
+                templateUrl: 'scroll/scroll-frame.html',
+                controller: 'ScrollDemoController'
+            })
             .otherwise({redirectTo: '/nested'});
     })
 
@@ -33,6 +37,7 @@ angular.module("demo", ["ngRoute", "dndLists"])
                 scope.options = [
                     {label: "Nested Containers", href: "#/nested"},
                     {label: "Simple Demo", href: "#/simple"},
+                    {label: "Scroll Demo", href: "#/scroll"},
                     {label: "Item Types", href: "#/types"},
                     {label: "Advanced Demo", href: "#/advanced"},
                     {label: "Multiselection", href: "#/multi"},
