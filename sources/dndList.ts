@@ -6,251 +6,255 @@
 module dndList {
     interface DndListScope extends angular.IScope {
         disabled: boolean,
-        scroll: {
-            auto: boolean,
-            timer?: any,
-            speed?: number
-        }
+        isDraggingOver: boolean,
+        placeholder: JQuery,
+        element: JQuery
     }
 
-    @dndList.directive('$parse', '$timeout', 'dndService')
+    @dndList.directive('$parse', '$timeout', 'dndService', '$q')
     class DndList implements ng.IDirective {
         constructor(private $parse: angular.IParseService,
             private $timeout: angular.ITimeoutService,
-            private dndService: IDndService) {
+            private dndService: IDndService,
+            private $q: angular.IQService) {
         }
 
-        public isMouseInFirstHalf(event, targetNode, horizontal = false) {
-            var dragEvent = event.dragEvent;
-            var mousePointer = horizontal ? dragEvent.clientX
-                : dragEvent.clientY;
+        public isMouseInFirstHalf(position: IDragPosition, targetNode, horizontal = false) {
+            var mousePointer = horizontal ? position.x
+                : position.y;
             var rect = targetNode.getBoundingClientRect();
             var targetSize = horizontal ? rect.width : rect.height;
             var targetPosition = horizontal ? rect.left : rect.top;
             return mousePointer < targetPosition + targetSize / 2;
         }
-        private startScroll(scope: DndListScope,listNode:HTMLElement,direction:1|-1)
-        {
-            this.stopScroll(scope);
-            this.performScroll(scope,listNode,direction);
+
+        private checkInRange(scope: DndListScope, element: HTMLElement,
+            position: IDragPosition) {
+            var rect = element.getBoundingClientRect();
+            if (position.x > rect.right || position.x < rect.left
+                || position.y > rect.bottom || position.y < rect.top
+                || !this.dndService.isDragging || scope.disabled)
+                return false;
+            return true;
         }
 
-        private performScroll(scope: DndListScope,listNode:HTMLElement,direction:1|-1)
-        {
-            if(!scope.scroll.auto)
-                return;
-            var scrollOffset=0;
-            if(direction==1)
-            {
-                scrollOffset=scope.scroll.speed;
-                if(listNode.scrollTop+scrollOffset+listNode.offsetHeight>listNode.scrollHeight)
-                    scrollOffset=listNode.scrollHeight-listNode.scrollTop-listNode.offsetHeight;
-                if(scrollOffset<0)
-                    scrollOffset=0;
+        private dragging(scope: DndListScope, element: HTMLElement,
+            position: IDragPosition, attrs: any) {
+            if (!this.checkInRange(scope, element, position)) {
+                this.stopDrag(scope);
+            } else {
+                if (!scope.isDraggingOver)
+                    this.startDrag(scope, element, position, attrs);
+                else
+                    this.performDrag(scope, element, position, attrs);
             }
-            else if(direction==-1)
-            {
-                scrollOffset=-scope.scroll.speed;
-                if(listNode.scrollTop+scrollOffset<0)
-                    scrollOffset=-listNode.scrollTop;
-            }
-            listNode.scrollTop+=scrollOffset;
-            scope.scroll.timer=setTimeout(()=>{
-                this.performScroll(scope,listNode,direction);
-            },20);
         }
 
-        private stopScroll(scope: DndListScope)
-        {
-            if(!scope.scroll.timer)
-                return;
-            clearTimeout(scope.scroll.timer);
-            scope.scroll.timer=null;
+        private stopDrag(scope: DndListScope) {
+            if (!scope.isDraggingOver) return;
+            scope.isDraggingOver = false;
+            scope.placeholder.remove();
+            scope.element.removeClass("dndDragover");
+        }
+
+        private startDrag(scope: DndListScope, element: HTMLElement,
+            position: IDragPosition, attrs: any) {
+            if (scope.disabled || !this.dndService.isDragging) return;
+            var source =angular.element(this.dndService.draggingElement);
+            var display = source.css('display');
+            source.css('display', 'none');
+            var dragTarget = <HTMLElement>document.elementFromPoint(position.x,position.y);
+            source.css('display', display);
+            if (dragTarget && dragTarget !== element) {
+                // Try to find the node direct directly below the list node.
+                var listItemNode = dragTarget;
+                while (listItemNode.parentNode !== element && listItemNode.parentNode) {
+                    listItemNode = <HTMLElement>listItemNode.parentNode;
+                }
+                if(listItemNode&&listItemNode.parentNode==element)
+                {
+                    scope.isDraggingOver = true;
+                    this.performDrag(scope, element, position, attrs);
+                }
+            }
+        }
+
+        private performDrag(scope: DndListScope, element: HTMLElement,
+                position: IDragPosition, attrs: any) {
+            if (scope.disabled || !this.dndService.isDragging) return;
+            var source = angular.element(this.dndService.draggingElement);
+            // First of all, make sure that the placeholder is shown
+            // This is especially important if the list is empty
+            var placeholderNode = scope.placeholder[0];
+            var listNode = scope.element[0];
+            if (attrs.dndDragover)
+                if (attrs.dndDragover &&
+                    !this.invokeCallback(scope, attrs.dndDragover, position,
+                        this.getPlaceholderIndex(listNode, placeholderNode), this.dndService.draggingObject)) {
+                    this.stopDrag(scope);
+                    return;
+                }
+            if (placeholderNode.parentNode != listNode) {
+                element.append(placeholderNode);
+            }
+            var dragTarget: HTMLElement;
+            var display = source.css('display');
+            source.css('display', 'none');
+            dragTarget = <HTMLElement>document.elementFromPoint(
+                position.x, position.y);
+            source.css('display', display);
+
+
+            if (dragTarget && dragTarget !== listNode) {
+                // Try to find the node direct directly below the list node.
+                var listItemNode = dragTarget;
+                while (listItemNode.parentNode !== listNode && listItemNode.parentNode) {
+                    listItemNode = <HTMLElement>listItemNode.parentNode;
+                }
+
+                if (listItemNode.parentNode === listNode && listItemNode !== placeholderNode) {
+                    // If the mouse pointer is in the upper half of the child element,
+                    // we place it before the child element, otherwise below it.
+                    if (this.isMouseInFirstHalf(position, listItemNode)) {
+                        listNode.insertBefore(placeholderNode, listItemNode);
+                    } else {
+                        listNode.insertBefore(placeholderNode, listItemNode.nextElementSibling);
+                    }
+                }
+            }
+
+            scope.element.addClass("dndDragover");
+        }
+
+        private tryDrop(scope: DndListScope, position: IDragPosition, attrs: any):
+            Promise<IDropResult> | IDropResult {
+
+            if (!this.checkInRange(scope, scope.element[0], position))
+                return {
+                    success: false
+                };
+            if (!scope.isDraggingOver)
+                return {
+                    success: false
+                };
+            var transferredObject = this.dndService.draggingObject;
+            if (!transferredObject)
+                return {
+                    success: true
+                };
+            transferredObject = angular.copy(transferredObject);
+            var placeholderNode = scope.placeholder[0];
+            var listNode = scope.element[0];
+            return new Promise((resolve: (result: IDropResult) => void, reject) => {
+                this.$timeout(() => {
+                    // Invoke the callback, which can transform the transferredObject and even abort the drop.
+                    var index = this.getPlaceholderIndex(listNode, placeholderNode);
+                    if (index < 0) {
+                        this.stopDrag(scope);
+                        resolve({
+                            success: false
+                        });
+                        return;
+                    }
+
+                    if (attrs.dndDragover &&
+                        !this.invokeCallback(scope, attrs.dndDragover, position,
+                            index, transferredObject)) {
+                        this.stopDrag(scope);
+                        resolve({
+                            success: false
+                        });
+                        return;
+                    }
+                    if (attrs.dndBeforeDrop) {
+                        var result = this.invokeCallback(scope,
+                            attrs.dndBeforeDrop, position, index, transferredObject);
+                        if (!result) {
+                            this.stopDrag(scope);
+                            resolve({
+                                success: false
+                            });
+                            return;
+                        }
+                    }
+                    index = this.getPlaceholderIndexWithoutNode(listNode, placeholderNode,
+                        this.dndService.draggingSourceElement);
+
+                    resolve({
+                        success: true,
+                        callback: (result: boolean) => {
+                            this.stopDrag(scope);
+                            if (!result)
+                                return;
+
+                            if (attrs.dndDrop) {
+                                transferredObject = this.invokeCallback(scope, attrs.dndDrop, position, index, transferredObject);
+                            }
+
+                            // Insert the object into the array, unless dnd-drop took care of that (returned true).
+                            if (transferredObject !== true) {
+                                scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
+                            }
+                            this.invokeCallback(scope, attrs.dndInserted, position, index, transferredObject);
+                        }
+                    });
+                }, 0);
+            });
         }
 
         public link: angular.IDirectiveLinkFn = (scope: DndListScope, element: ng.IAugmentedJQuery,
             attrs: any): void => {
             // While an element is dragged over the list, this placeholder element is inserted
             // at the location where the element would be inserted after dropping
-
-            var horizontal = attrs.dndHorizontalList && scope.$eval(attrs.dndHorizontalList);
             var placeholder = this.getPlaceholderElement(element);
-            var placeholderNode = placeholder[0];
-            var listNode = element[0];
             placeholder.remove();
             var self = this;
-            var dropX = 0;
-            var dropY = 0;
-            var unsubscribeDragStart: () => void;
-            var interactOptions:{accept?:HTMLElement|string}={};
-            var scrollOffset=null;
-            scope.scroll={
-                auto:false
+            scope.placeholder = placeholder;
+            scope.element = element;
+            var interactOptions: { accept?: HTMLElement | string } = {};
+            if (attrs.dndAccept)
+                interactOptions.accept = attrs.dndAccept;
+            var dragEvent = (position: IDragPosition) => {
+                this.dragging(scope, element[0], position, attrs);
             }
-            if(attrs.dndScroll)
-            {
-                scrollOffset=parseFloat(attrs.dndScroll);
-                scope.scroll={
-                    auto:true,
-                    speed:scrollOffset
-                }
-            }
-            if(attrs.dndAccept)
-                interactOptions.accept=attrs.dndAccept;
-            interact(element[0]).dropzone(interactOptions).on('dragenter', (event) => {
-                this.stopScroll(scope);
-                if (scope.disabled) return;
-                dropX = 0;
-                dropY = 0;
-                self.dndService.isDroped = false;
-            }).on('dragleave', (event) => {
-                this.stopScroll(scope);
-                return self.stopDragover(placeholder, element);
-            }).on('dropmove', (event) => {
-                if (scope.disabled) return self.stopDragover(placeholder, element);
-                var source = angular.element(self.dndService.draggingElement);
-                // First of all, make sure that the placeholder is shown
-                // This is especially important if the list is empty
-                if (placeholderNode.parentNode != listNode) {
-                    element.append(placeholder);
-                }
-                var dragTarget: HTMLElement;
-                var display = source.css('display');
-                source.css('display', 'none');
-                dragTarget = <HTMLElement>document.elementFromPoint(event.dragEvent.clientX, event.dragEvent.clientY);
-                source.css('display', display);
-                if (dragTarget&&dragTarget !== listNode) {
-                    // Try to find the node direct directly below the list node.
-                    var listItemNode = dragTarget;
-                    while (listItemNode.parentNode !== listNode && listItemNode.parentNode) {
-                        listItemNode = <HTMLElement>listItemNode.parentNode;
-                    }
-
-                    if (listItemNode.parentNode === listNode && listItemNode !== placeholderNode) {
-                        // If the mouse pointer is in the upper half of the child element,
-                        // we place it before the child element, otherwise below it.
-                        if (self.isMouseInFirstHalf(event, listItemNode)) {
-                            listNode.insertBefore(placeholderNode, listItemNode);
-                        } else {
-                            listNode.insertBefore(placeholderNode, listItemNode.nextElementSibling);
-                        }
-                    }
-                }
-
-                if (attrs.dndDragover &&
-                    !self.invokeCallback(scope, attrs.dndDragover, event,
-                        self.getPlaceholderIndex(listNode, placeholderNode), self.dndService.draggingObject)) {
-                    self.stopDragover(placeholder, element);
-                }
-                if(scrollOffset)
-                {
-                    var height=source[0].offsetHeight/2;
-                    var rect=listNode.getBoundingClientRect();
-                    if(event.dragEvent.clientY>=rect.bottom-height&&
-                        event.dragEvent.clientY<=rect.bottom+height)
-                            this.startScroll(scope,listNode,1);
-                    else if(event.dragEvent.clientY<=rect.top+height&&
-                        event.dragEvent.clientY>=rect.top-height)
-                            this.startScroll(scope,listNode,-1);
-                    else
-                        this.stopScroll(scope);
-                }
-
-                element.addClass("dndDragover");
-            }).on('drop', (event) => {
-                this.stopScroll(scope);
-                //disable duplicate invoke
-                if (self.dndService.isDroped)
-                    return;
-                if (scope.disabled) return self.stopDragover(placeholder, element);
-                var transferredObject = self.dndService.draggingObject;
-                if (!transferredObject)
-                    return self.stopDragover(placeholder, element);
-                transferredObject = angular.copy(transferredObject);
-                self.$timeout(() => {
-                    if (self.dndService.stopDrop) {
-                        self.dndService.isDroped = false;
-                        self.dndService.draggingElementScope.endDrag();
-                        return self.stopDragover(placeholder, element);
-                    }
-                    // Invoke the callback, which can transform the transferredObject and even abort the drop.
-                    var index = self.getPlaceholderIndex(listNode, placeholderNode);
-                    if (index < 0)
-                        return self.stopDragover(placeholder, element);
-
-                    if (attrs.dndDragover &&
-                        !self.invokeCallback(scope, attrs.dndDragover, event,
-                            index, transferredObject)) {
-                        return self.stopDragover(placeholder, element);
-                    }
-                    if(attrs.dndBeforeDrop)
-                    {
-                        var result = self.invokeCallback(scope, attrs.dndBeforeDrop, event, index, transferredObject);
-                        if (!result) {
-                            self.dndService.isDroped = false;
-                            self.dndService.draggingElementScope.endDrag(event);
-                            return self.stopDragover(placeholder, element);
-                        }
-                    }
-                    
-                    self.dndService.isDroped = true;
-                    if (!self.dndService.draggingElementScope.endDrag(event))
-                        return self.stopDragover(placeholder, element);
-                    index = self.getPlaceholderIndexWithoutNode(listNode, placeholderNode,
-                        self.dndService.draggingSourceElement);
-                    if (attrs.dndDrop) {
-                        transferredObject = self.invokeCallback(scope, attrs.dndDrop, event, index, transferredObject);
-                    }
-
-                    // Insert the object into the array, unless dnd-drop took care of that (returned true).
-                    if (transferredObject !== true) {
-                        scope.$eval(attrs.dndList).splice(index, 0, transferredObject);
-                    }
-                    self.invokeCallback(scope, attrs.dndInserted, event, index, transferredObject);
-
-                    self.stopDragover(placeholder, element);
-                }, 0);
+            this.dndService.subscribeDragPositionChanged(scope, (value) => {
+                dragEvent(value);
+            });
+            this.dndService.subscribeIsDraggingChanged(scope, value => {
+                if (!value)
+                    this.stopDrag(scope);
+            });
+            this.dndService.subscribeDrop(scope, position => {
+                return this.tryDrop(scope, position, attrs);
             });
             if (attrs.ngDisabled) {
                 scope.disabled = scope.$eval(attrs.ngDisabled);
-                if (scope.disabled)
-                    interact(element[0]).dropzone(false);
-                scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
+                scope.$watch(attrs.ngDisabled, (newValue, oldValue) => {
                     scope.disabled = <boolean>newValue;
                     if (!newValue)
-                        interact(element[0]).dropzone(true);
-                    else {
-                        interact(element[0]).dropzone(false);
-                    }
+                        this.stopDrag(scope);
                 });
             }
-        }
-
-        stopDragover(placeholder, element) {
-            placeholder.remove();
-            element.removeClass("dndDragover");
-            return true;
         }
 
         getPlaceholderIndex(listNode, placeholderNode) {
             return Array.prototype.indexOf.call(listNode.children, placeholderNode);
         }
 
-        getPlaceholderIndexWithoutNode(listNode, placeholderNode,ignoreNode) {
-            var result=0;
-            for(var i=0;i<listNode.children.length;i++,result++)
-                {
-                    if(listNode.children[i]==placeholderNode)
-                        return result;
-                    if(listNode.children[i]==ignoreNode)
-                        result--;
-                }
-                return result;
+        getPlaceholderIndexWithoutNode(listNode, placeholderNode, ignoreNode) {
+            var result = 0;
+            for (var i = 0; i < listNode.children.length; i++ , result++) {
+                if (listNode.children[i] == placeholderNode)
+                    return result;
+                if (listNode.children[i] == ignoreNode)
+                    result--;
+            }
+            return result;
         }
 
-        invokeCallback(scope, expression, event, index, item = null) {
+        invokeCallback(scope, expression, position: IDragPosition, index, item = null) {
             return this.$parse(expression)(scope, {
-                event: event,
+                position: position,
                 index: index,
                 item: item || undefined
             });

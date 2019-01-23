@@ -59,3 +59,13 @@
     background-color: #dff0d8;
     color: #3c763d;
 }
+
+.dndDraggingBody{
+    user-select: none;
+    -ms-user-select: none;
+}
+
+.dndDragging{
+    user-select: none;
+    -ms-user-select: none;
+}

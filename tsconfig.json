@@ -5,12 +5,18 @@
         "sourceMap": true,
         "removeComments": true,
         "emitDecoratorMetadata": false,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "lib": [ "es5", "es2015.promise", "dom" ],
+        "noImplicitAny": false,
+        "noImplicitUseStrict": false,
+        "noEmitHelpers": true,
     },
     "files": [
         "sources/angularDirective.ts",
         "sources/dndService.ts",
         "sources/dndDraggable.ts",
-        "sources/dndList.ts"
+        "sources/dndList.ts",
+        "sources/dndScroll.ts",
+        "sources/browserHelper.ts"
     ]
 }

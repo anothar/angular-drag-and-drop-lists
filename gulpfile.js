@@ -3,20 +3,19 @@ var ts = require('gulp-typescript');
 var minify = require('gulp-minify');
 var concat = require('gulp-concat');
 var webserver = require('gulp-webserver');
-var sourcemaps = require('gulp-sourcemaps');
 
 gulp.task('demo', function () {
     gulp.src('.')
         .pipe(webserver({
             livereload: true,
-            open:'demo/index.html'
+            open:'demo/index.html',
         }));
 });
 
 gulp.task('compile', function () {
     var tsProject = ts.createProject('tsconfig.json');
 
-    var tsResult = tsProject.src().pipe(ts(tsProject));
+    var tsResult = tsProject.src().pipe(tsProject());
 
     return tsResult.js.pipe(concat('angular-drag-and-drop-lists.js')).pipe(minify({
         ext: {

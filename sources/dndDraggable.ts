@@ -2,138 +2,197 @@
 /// <reference path="interact.d.ts"/>
 /// <reference path="angularDirective.ts" />
 /// <reference path="dndService.ts" />
-
+/// <reference path="browserHelper.ts"/>
 module dndList {
     interface DndDraggableScope extends angular.IScope {
-        endDrag: (event) => boolean,
-        disabled: boolean
+        endDrag: (event) => Promise<boolean>,
+        disabled: boolean,
+        mouseStartPosition: IDragPosition,
+        transform: IDragPosition,
+        dragging: boolean
     }
 
-    @dndList.directive('$parse', '$timeout', 'dndService')
+    @dndList.directive('$parse', '$timeout', 'dndService', '$window')
     class DndDraggable implements ng.IDirective {
         constructor(private $parse: angular.IParseService,
             private $timeout: angular.ITimeoutService,
-            private dndService: IDndService) {
+            private dndService: IDndService,
+            private $window: angular.IWindowService) {
         }
 
-        public link: angular.IDirectiveLinkFn = (scope: DndDraggableScope, element: ng.IAugmentedJQuery,
-            attrs: any): void => {
-            var self = this;
-            var mouseX = 0;
-            var mouseY = 0;
-            var transformX = 0;
-            var transformY = 0;
-            var parent: HTMLElement;
-            var nextElement: HTMLElement;
-            var initwidth;
-            var initheight;
-            var isDragging = false;
-            var registerDrag = (elements: any) => {
-                if (typeof elements == 'string') {
-                    elements = element[0].querySelectorAll(elements);
-                    for (var i = 0; i < elements.length; i++)
-                        registerDrag(elements[i]);
+        private async dragEnd(scope: DndDraggableScope, element: ng.IAugmentedJQuery,
+            event: JQueryMouseEventObject, attrs: any): Promise<void> {
+            if (!scope.dragging) return;
+            this.performDrag(scope, element, event, attrs);
+            scope.dragging = false;
+            //I don't know why but in quickrun dragend is called twice
+
+            (<HTMLElement>this.dndService.draggingElement).parentNode.removeChild(this.dndService.draggingElement);
+            element.removeClass("dndDragging");
+            var drop = await this.dndService.drop();
+            this.$timeout(() => {
+                element[0].style.display = 'block';
+                //bug with edge - it selects just after drop
+                //var selection = document.getSelection();
+                //if (selection)
+                //    selection.removeAllRanges();
+
+                angular.element(document.body).removeClass('dndDraggingBody');
+                if (drop.success) {
+                    if (!this.$parse(attrs.dndMoved)(scope, { event: event })) {
+                        if (drop.callback)
+                            drop.callback(true);
+                        return;
+                    }
+                }
+                else {
+                    this.$parse(attrs.dndCanceled)(scope, { event: event });
+                    if (drop.callback)
+                        drop.callback(false);
                     return;
                 }
-                draggableElements = elements;
-                interact(elements).draggable({
-                    // disable the default drag start by down->move
-                    manualStart: true
-                }).on('move', (event) => {
-                    if (isDragging) return;
-                    if (scope.disabled) return;
-                    var interaction = event.interaction;
-                   
-                    // if the pointer was moved while being held down
-                    // and an interaction hasn't started yet
-                    if (!interaction.pointerIsDown || interaction.interacting())
-                        return;
-                    angular.element(document.body).addClass('dndDraggingBody');
-                    isDragging = true;
-                    var source = <HTMLElement>element[0];
-                    var lists = source.querySelectorAll('[dnd-list]');
-                    for (var i = 0; i < lists.length; i++) {
-                        var list = lists[i];
-                        interact(list).dropzone(false);
+                this.$parse(attrs.dndDragend)(scope, { event: event, isDroped: true });
+                if (drop.callback)
+                    drop.callback(true);
+            }, 0);
+        }
+
+        private dragStart(scope: DndDraggableScope, element: ng.IAugmentedJQuery,
+            event: JQueryMouseEventObject, attrs: any) {
+            if (scope.disabled) return;
+            if (scope.dragging) return;
+            //var selection = document.getSelection();
+            //if (selection)
+            //    selection.removeAllRanges();
+            scope.dragging = true;
+            angular.element(document.body).addClass('dndDraggingBody');
+            var source = <HTMLElement>element[0];
+            var rect = source.getBoundingClientRect();
+            var mouseX = rect.left - event.clientX;
+            var mouseY = rect.top - event.clientY;
+            scope.mouseStartPosition = {
+                x: mouseX,
+                y: mouseY
+            }
+            var transformX = 0;
+            var transformY = 0;
+            var newNode = <HTMLElement>element[0].cloneNode(true);
+            var newElement = angular.element(newNode);
+            newElement.addClass("dndDragging");
+            newElement.css('width', rect.width + "px");
+            newElement.css('height', rect.height + "px");
+            document.body.appendChild(newElement[0]);
+            rect = source.getBoundingClientRect();
+            // translate the element
+            transformX += event.clientX - rect.left + mouseX;
+            transformY += event.clientY - rect.top + mouseY;
+            scope.transform = {
+                x: transformX,
+                y: transformY
+            };
+            newNode.style.webkitTransform =
+                newNode.style.transform =
+                'translate(' + transformX + 'px, ' + transformY + 'px)';
+            source.style.display = 'none';
+
+            this.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
+            this.dndService.draggingElementScope = scope;
+            this.dndService.draggingElement = newNode;
+            this.dndService.draggingSourceElement = <HTMLElement>element[0];
+            this.dndService.isDragging = true;
+            this.$timeout(() => {
+                this.$parse(attrs.dndDragstart)(scope, { event: event });
+            }, 0);
+        }
+
+        private performDrag(scope: DndDraggableScope, element: ng.IAugmentedJQuery,
+            event: JQueryMouseEventObject, attrs: any) {
+            if (scope.disabled) return;
+            if (!scope.dragging) return;
+            var target = this.dndService.draggingElement;
+            var rect = target.getBoundingClientRect();
+            // translate the element
+
+            scope.transform.x += event.clientX - rect.left + scope.mouseStartPosition.x;
+            scope.transform.y += event.clientY - rect.top + scope.mouseStartPosition.y;
+            if (event.clientX >= 0 && event.clientX < this.$window.outerWidth &&
+                event.clientY >= 0 && event.clientY < this.$window.outerHeight) {
+                target.style.webkitTransform =
+                    target.style.transform =
+                    'translate(' + scope.transform.x + 'px, ' + scope.transform.y + 'px)';
+                this.dndService.dragPosition = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+        }
+
+        public link: angular.IDirectiveLinkFn = async (scope: DndDraggableScope, element: ng.IAugmentedJQuery,
+            attrs: any): Promise<void> => {
+            var self = this;
+            var isMouseDown;
+            var mousemove = (event: JQueryMouseEventObject) => {
+                this.performDrag(scope, element, event, attrs);
+            }
+            var mousedown = (event: JQueryMouseEventObject) => {
+                if (isMouseDown) {
+                    mouseUp(event);
+                    return;
+                }
+                event.preventDefault();
+                isMouseDown = true;
+                angular.element(window).off('mouseup', mouseUp);
+                angular.element(window).on('mouseup', mouseUp);
+                setTimeout(() => {
+                    if (isMouseDown && !scope.dragging) {
+                        this.dragStart(scope, element, event, attrs);
+                        angular.element(window).off('mousemove', mousemove);
+                        angular.element(window).on('mousemove', mousemove);
                     }
-                    var rect = source.getBoundingClientRect();
-                    mouseX = rect.left - event.clientX;
-                    mouseY = rect.top - event.clientY;
-                    transformX = 0;
-                    transformY = 0;
-                    var newNode = <HTMLElement>element[0].cloneNode(true);
-                    var newElement = angular.element(newNode);
-                    parent = element.parent()[0];
-                    initheight = element.css('height');
-                    initwidth = element.css('width');
-                    nextElement = <HTMLElement>source.nextElementSibling;
-                    newElement.addClass("dndDragging");
-                    newElement.css('width', rect.width + "px");
-                    newElement.css('height', rect.height + "px");
-                    document.body.appendChild(newElement[0]);
-                    rect = source.getBoundingClientRect();
-                    // translate the element
-                    transformX += event.clientX - rect.left + mouseX;
-                    transformY += event.clientY - rect.top + mouseY;
-                    newNode.style.webkitTransform =
-                        newNode.style.transform =
-                        'translate(' + transformX + 'px, ' + transformY + 'px)';
-                    self.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
-                    self.dndService.isDroped = false;
-                    self.dndService.draggingElementScope = scope;
-                    self.dndService.draggingElement = newNode;
-                    self.dndService.draggingSourceElement= <HTMLElement>element[0];
-                    self.$timeout(() => {
-                        self.$parse(attrs.dndDragstart)(scope, { event: event });
-                    }, 0);
-                    interact(newNode).draggable({
-                        inertia: true,
-                        autoScroll: false,
-                    })
-                    event.interaction.start({ name: 'drag' },
-                        event.interactable, newNode);
-                    source.style.display = 'none';
-                    
-                }).on('dragend', (event) => {
-                    
-                    if (scope.disabled) return;
-                    event.interaction.stop();
-                    //I don't know why but in quickrun dragend is called twice
-                    if(!event.target||!event.target.parentNode)
-                        return;
-                    (<HTMLElement>event.target).parentNode.removeChild(event.target);
-                    var lists = element[0].querySelectorAll('[dnd-list]');
-                    for (var i = 0; i < lists.length; i++) {
-                        var list = lists[i];
-                        interact(list).dropzone(true);
-                    }
-                    self.$timeout(() => { 
-                        scope.endDrag(event); 
-                        element[0].style.display = 'block';
-                        angular.element(document.body).removeClass('dndDraggingBody');
-                    }, 0);
-                }).on('dragmove', (event) => {
-                    if (scope.disabled) return;
-                    var rect = event.target.getBoundingClientRect();
-                    var target = event.target;
-                    // translate the element
-                    transformX += event.clientX - rect.left + mouseX;
-                    transformY += event.clientY - rect.top + mouseY;
-                    target.style.webkitTransform =
-                        target.style.transform =
-                        'translate(' + transformX + 'px, ' + transformY + 'px)';
-                });
+                }, 200);
+            }
+            var mouseUp = (event: JQueryMouseEventObject) => {
+                isMouseDown = false;
+                angular.element(window).off('mouseup', mouseUp);
+                if (scope.dragging) {
+                    this.dragEnd(scope, element, event, attrs);
+                    angular.element(window).off('mousemove', mousemove);
+                }
+            }
+
+            var unregisterDrag = () => {
+                if (scope.dragging)
+                    this.dragEnd(scope, element, <any>{
+                        clientX: this.dndService.dragPosition.x,
+                        clientY: this.dndService.dragPosition.y
+                    }, attrs);
+                angular.element(window).off('mouseup', mouseUp);
+                angular.element(window).off('mousemove', mousemove);
+                if (draggableElements)
+                    angular.element(draggableElements).off('mousedown', mousedown);
+            }
+            var registerDrag = (elements: any, remember: boolean = true) => {
+                if (typeof elements == 'string') {
+                    elements = element[0].querySelectorAll(elements);
+                    if (remember)
+                        draggableElements = elements;
+                    for (var i = 0; i < elements.length; i++)
+                        registerDrag(elements[i], false);
+                    return;
+                }
+                if (remember)
+                    draggableElements = elements;
+                angular.element(elements).off('mousedown', mousedown);
+                angular.element(elements).on('mousedown', mousedown);
             }
             if (attrs.ngDisabled) {
                 scope.disabled = scope.$eval(attrs.ngDisabled);
-                scope.$watch(attrs.ngDisabled, function (newValue, oldValue) {
+                scope.$watch(attrs.ngDisabled, async (newValue, oldValue) => {
                     scope.disabled = <boolean>newValue;
                     if (!newValue)
                         registerDrag(draggableElements);
-                    else {
+                    else
                         unregisterDrag();
-                        scope.endDrag(null);
-                    }
                 });
             }
             var clickHandler = function (event) {
@@ -153,28 +212,7 @@ module dndList {
             };
             registerClick();
             var draggableElements: any;
-            var unregisterDrag = () => {
-                interact(draggableElements).draggable(false);
-            }
-            scope.endDrag = (event) => {
-                if (!isDragging) return;
-                isDragging = false;
-                element.removeClass("dndDragging");
-                if (self.dndService.isDroped) {
-                    if (!self.$parse(attrs.dndMoved)(scope, { event: event })) {
-                        self.dndService.isDroped = false;
-                        return false;
-                    }
-                }
-                else {
-                    self.$parse(attrs.dndCanceled)(scope, { event: event });
-                    return false;
-                }
-                self.$parse(attrs.dndDragend)(scope, { event: event, isDroped: self.dndService.isDroped });
-                self.dndService.isDroped = false;
-                return true;
-            };
-            
+
 
             if (attrs.dndHandle) {
                 var handleString = scope.$eval(attrs.dndHandle);
@@ -186,6 +224,8 @@ module dndList {
             } else {
                 registerDrag(element[0]);
             }
+            scope.$on('$destroy', () =>
+                unregisterDrag());
         }
     }
     angular.module('dndLists').directive('dndDraggable',

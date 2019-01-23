@@ -2,14 +2,17 @@
  * The controller doesn't do much more than setting the initial data model
  */
 angular.module("demo").controller("NestedListsDemoController", function ($scope) {
-    $scope.remove = function (index,list) {
+    $scope.remove = function (index, list) {
         list.splice(index, 1);
         return true;
     };
-    $scope.copy=function(item)
-    {
+    $scope.copy = function (item) {
         item.id = item.id + 1;
-        return false;
+        $scope.models.templates = [
+            { type: "item", id: 2 },
+            { type: "container", id: 1, columns: [[], []] }
+        ];
+        return true;
     }
     $scope.models = {
         selected: null,
