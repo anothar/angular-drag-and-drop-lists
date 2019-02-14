@@ -4,7 +4,7 @@
 /// <reference path="dndService.ts"/>
 
 module dndList {
-    export function IsMicrosoft(): boolean {
+    export function IsIE(): boolean {
         if (/MSIE 10/i.test(navigator.userAgent)) {
             // This is internet explorer 10
             return true;
@@ -15,10 +15,10 @@ module dndList {
             return true;
         }
 
-        if (/Edge\/\d./i.test(navigator.userAgent)) {
-            // This is Microsoft Edge
-            return true;
-        }
+        // if (/Edge\/\d./i.test(navigator.userAgent)) {
+        //     // This is Microsoft Edge
+        //     return true;
+        // }
         return false;
     }
 }

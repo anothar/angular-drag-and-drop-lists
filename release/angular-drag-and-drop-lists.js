@@ -472,7 +472,10 @@ var dndList;
                     return;
                 }
             if (placeholderNode.parentNode != listNode) {
-                element.append(placeholderNode);
+                if (dndList.IsIE())
+                    element.parentNode.appendChild(placeholderNode);
+                else
+                    element.append(placeholderNode);
             }
             var dragTarget;
             var display = source.css('display');
@@ -701,17 +704,14 @@ var dndList;
 
 var dndList;
 (function (dndList) {
-    function IsMicrosoft() {
+    function IsIE() {
         if (/MSIE 10/i.test(navigator.userAgent)) {
             return true;
         }
         if (/MSIE 9/i.test(navigator.userAgent) || /rv:11.0/i.test(navigator.userAgent)) {
             return true;
         }
-        if (/Edge\/\d./i.test(navigator.userAgent)) {
-            return true;
-        }
         return false;
     }
-    dndList.IsMicrosoft = IsMicrosoft;
+    dndList.IsIE = IsIE;
 })(dndList || (dndList = {}));

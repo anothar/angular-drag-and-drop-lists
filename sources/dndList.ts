@@ -95,7 +95,10 @@ module dndList {
                     return;
                 }
             if (placeholderNode.parentNode != listNode) {
-                element.append(placeholderNode);
+                if(IsIE())
+                    element.parentNode.appendChild(placeholderNode);
+                else
+                    element.append(placeholderNode);
             }
             var dragTarget: HTMLElement;
             var display = source.css('display');
