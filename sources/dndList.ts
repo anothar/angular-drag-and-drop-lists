@@ -94,12 +94,9 @@ module dndList {
                     this.stopDrag(scope);
                     return;
                 }
-            if (placeholderNode.parentNode != listNode) {
-                if(IsIE())
-                    element.parentNode.appendChild(placeholderNode);
-                else
-                    element.append(placeholderNode);
-            }
+            if (placeholderNode.parentNode != listNode)
+                element.parentNode.appendChild(placeholderNode);
+            
             var dragTarget: HTMLElement;
             var display = source.css('display');
             source.css('display', 'none');
