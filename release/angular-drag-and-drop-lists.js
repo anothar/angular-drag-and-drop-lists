@@ -334,6 +334,7 @@ var dndList;
             this.dndService.isDragging = true;
             this.$timeout(function () {
                 _this.$parse(attrs.dndDragstart)(scope, { event: event });
+                _this.performDrag(scope, element, event, attrs);
             }, 0);
         };
         DndDraggable.prototype.performDrag = function (scope, element, event, attrs) {
@@ -471,12 +472,8 @@ var dndList;
                     this.stopDrag(scope);
                     return;
                 }
-            if (placeholderNode.parentNode != listNode) {
-                if (dndList.IsIE())
-                    element.parentNode.appendChild(placeholderNode);
-                else
-                    element.append(placeholderNode);
-            }
+            if (placeholderNode.parentNode != listNode)
+                element.parentNode.appendChild(placeholderNode);
             var dragTarget;
             var display = source.css('display');
             source.css('display', 'none');

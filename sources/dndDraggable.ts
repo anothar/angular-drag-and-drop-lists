@@ -102,6 +102,7 @@ module dndList {
             this.dndService.isDragging = true;
             this.$timeout(() => {
                 this.$parse(attrs.dndDragstart)(scope, { event: event });
+                this.performDrag(scope,element,event,attrs);
             }, 0);
         }
 
