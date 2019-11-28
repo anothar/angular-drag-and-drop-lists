@@ -81,8 +81,10 @@ module dndList {
             newElement.addClass("dndDragging");
             newElement.css('width', rect.width + "px");
             newElement.css('height', rect.height + "px");
+            var initDisplay=newNode.style.display;
+            newNode.style.display='none';
             document.body.appendChild(newElement[0]);
-            rect = source.getBoundingClientRect();
+            rect = newNode.getBoundingClientRect();
             // translate the element
             transformX += event.clientX - rect.left + mouseX;
             transformY += event.clientY - rect.top + mouseY;
@@ -98,6 +100,7 @@ module dndList {
             this.dndService.draggingElement = newNode;
             this.dndService.draggingSourceElement = <HTMLElement>element[0];
             this.dndService.isDragging = true;
+            newNode.style.display=initDisplay;
             this.$timeout(() => {
                 this.$parse(attrs.dndDragstart)(scope, { event: event });
                 this.performDrag(scope,element,event,attrs);

@@ -315,8 +315,10 @@ var dndList;
             newElement.addClass("dndDragging");
             newElement.css('width', rect.width + "px");
             newElement.css('height', rect.height + "px");
+            var initDisplay = newNode.style.display;
+            newNode.style.display = 'none';
             document.body.appendChild(newElement[0]);
-            rect = source.getBoundingClientRect();
+            rect = newNode.getBoundingClientRect();
             transformX += event.clientX - rect.left + mouseX;
             transformY += event.clientY - rect.top + mouseY;
             scope.transform = {
@@ -331,6 +333,7 @@ var dndList;
             this.dndService.draggingElement = newNode;
             this.dndService.draggingSourceElement = element[0];
             this.dndService.isDragging = true;
+            newNode.style.display = initDisplay;
             this.$timeout(function () {
                 _this.$parse(attrs.dndDragstart)(scope, { event: event });
                 _this.performDrag(scope, element, event, attrs);
