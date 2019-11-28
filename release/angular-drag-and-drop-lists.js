@@ -326,7 +326,6 @@ var dndList;
             newNode.style.webkitTransform =
                 newNode.style.transform =
                     'translate(' + transformX + 'px, ' + transformY + 'px)';
-            source.style.display = 'none';
             this.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
             this.dndService.draggingElementScope = scope;
             this.dndService.draggingElement = newNode;
@@ -335,6 +334,7 @@ var dndList;
             this.$timeout(function () {
                 _this.$parse(attrs.dndDragstart)(scope, { event: event });
                 _this.performDrag(scope, element, event, attrs);
+                source.style.display = 'none';
             }, 0);
         };
         DndDraggable.prototype.performDrag = function (scope, element, event, attrs) {

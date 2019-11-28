@@ -93,8 +93,6 @@ module dndList {
             newNode.style.webkitTransform =
                 newNode.style.transform =
                 'translate(' + transformX + 'px, ' + transformY + 'px)';
-            source.style.display = 'none';
-
             this.dndService.draggingObject = scope.$eval(attrs.dndDraggable);
             this.dndService.draggingElementScope = scope;
             this.dndService.draggingElement = newNode;
@@ -103,6 +101,9 @@ module dndList {
             this.$timeout(() => {
                 this.$parse(attrs.dndDragstart)(scope, { event: event });
                 this.performDrag(scope,element,event,attrs);
+                //fix for bug: when we just start drag placeholder always should be displayed on place of element
+                //but if we hide element earlier it can be displayed under next element
+                source.style.display = 'none';
             }, 0);
         }
 
